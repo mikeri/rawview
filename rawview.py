@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #coding=latin
 import sys
 import struct
@@ -34,10 +35,21 @@ def decodebyte(byte):
     bits = []
     bit = 1
     for pos in range(0, 8):
-        bits.append(ord(byte) & int(bit))
+        bitstate = ord(byte) & int(bit)
+        if bitstate > 0: bitstate = True
+        else: bitstate = False
+        bits.append(bitstate)
         bit = bit << 1
     bits.reverse()
     return bits
+
+def encodebyte(bits):
+    byte = 0
+    bitval = 128
+    for bit in bits:
+        if bit: byte += bitval
+        bitval = bitval / 2
+    return chr(byte)
 
 def makebitmap(bitmap):
     global height
@@ -58,7 +70,7 @@ def makebitmap(bitmap):
 def amigaload(font):
     fontsetting = readheader(font)
     if fontsetting['tf_XSize'] == 8 and fontsetting['tf_YSize'] == 8:
-        bitmap = []
+        bitmap = ''
         location = []
         charwidth = []
         # Strip header
@@ -79,13 +91,30 @@ def amigaload(font):
             dprint(location[count-1])
             dprint(charwidth[count-1])
 
-        for char in range(lochar, 223-1):
+        fontbits = []
+        count = 0
+        for char in font:
+            count += 1
+            dprint(count)
+            dprint(ord(char))
+            bits = decodebyte(char)
+            fontbits += bits
+
+        dprint(fontbits)
+
+        for char in range(0, numchars):
             for row in range (0, 8):
-                fetchbyte = location[char]/8 + (length * row)
                 dprint(('char:' ,char))
-                dprint(fetchbyte)
-                bitmapbyte = font[fetchbyte]
-                bitmap.append(bitmapbyte)
+                #fetchbyte = location[char]/8 + (length * row)
+                #if char == 0: fetchbyte = 0
+                #dprint(fetchbyte)
+                bitlocation = location[char] + (length * row)
+                charbits = fontbits[bitlocation:bitlocation+8]
+                #bitmapbyte = font[fetchbyte]
+                bitmapbyte = encodebyte(charbits)
+                dprint(len(charbits))
+                #bitmap.append(bitmapbyte)
+                bitmap += bitmapbyte
         if outfile: writepetscii(bitmap, lochar, hichar)
         return bitmap
     else:

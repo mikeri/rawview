@@ -1,3 +1,3 @@
 # rawview
 
-This was written to view C64 bitmap fonts. I'm also trying to implement reading of Amiga fonts, but it's not working yet. Seems Python is not really suited for handling of raw data in bits and bytes.
+This tool was written to view C64 bitmap fonts. There is also an Amiga font loader and converter in progress. It's working on some 8x8 fonts but not all. It's very hackish at the moment.
