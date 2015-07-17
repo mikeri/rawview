@@ -1,3 +1,4 @@
+#coding=latin
 import sys
 import struct
 import argparse
@@ -9,9 +10,12 @@ parser = argparse.ArgumentParser(description=("Display raw bitmaps"))
 parser.add_argument('rawfile', metavar='file', 
                     help=("Font or bitmap to load."))
 
-parser.add_argument('--amiga', 
+parser.add_argument('-a', '--amiga', 
                     action='store_true',
                     help="Attempt to load as Amiga font.",)
+
+parser.add_argument('-o', metavar='outfile', 
+                    help="Attempt to convert to and write C64 charset.",)
 
 parser.add_argument('--debug', 
                     action='store_true',
@@ -20,7 +24,8 @@ parser.add_argument('--debug',
 args = parser.parse_args()
 rawfile = args.rawfile
 debug = args.debug
-amiga = args.debug
+amiga = args.amiga
+outfile = args.o
 
 def dprint(message):
     if debug: print(message)
@@ -56,30 +61,32 @@ def amigaload(font):
         bitmap = []
         location = []
         charwidth = []
+        # Strip header
         font = font[36:]
         lochar = fontsetting['tf_LoChar']
         hichar = fontsetting['tf_HiChar']
-        length = hichar - lochar + 3
+        length = fontsetting['tf_Modulo']
         fontpos = fontsetting['tf_CharData']
         charloc = fontsetting['tf_CharLoc']
+        numchars = hichar - lochar
         count = 0
-        for char in range(0, length*4+4, 4):
+        for char in range(0, numchars*4+4, 4):
             data = struct.unpack('>HH',font[char+charloc:char+charloc+4])
             location.append(data[0])
             charwidth.append(data[1])
             count += 1
             dprint(count)
-            dprint(location)
-            dprint(charwidth)
+            dprint(location[count-1])
+            dprint(charwidth[count-1])
 
-        for char in range(0, length+1):
+        for char in range(lochar, 223-1):
             for row in range (0, 8):
                 fetchbyte = location[char]/8 + (length * row)
                 dprint(('char:' ,char))
                 dprint(fetchbyte)
                 bitmapbyte = font[fetchbyte]
-                dprint(bitmapbyte)
                 bitmap.append(bitmapbyte)
+        if outfile: writepetscii(bitmap, lochar, hichar)
         return bitmap
     else:
         print("Can only convert 8x8 fonts.")
@@ -135,6 +142,33 @@ def readheader(font):
     dprint(fields)
     return dict(fields)
 
+def writepetscii(bitmap,lochar,hichar):
+    global outfile
+    petsciiorder = '@abcdefghijklmnopqrstuvwxyz[£]^_ !"#$%&\'()*+,-./0123456789:;<=>?\\ABCDEFGHIJKLMNOPQRSTUVWXYZ'.decode('utf-8')
+    asciiorder =   ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[£]^_\\abcdefghijklmnopqrstuvwxyz'.decode('utf-8')
+    length = len(petsciiorder)
+    outchars = []
+    offset = 73 
+
+    for count in range(0, 255 * 8):
+        outchars.append(0)
+
+    count = 0
+    for char in petsciiorder:
+        asciipos = asciiorder.index(char)
+        dprint(char + ' = ' + petsciiorder[asciipos])
+
+        for line in range(0, 8):
+            outchars[count*8+line] = bitmap[asciipos * 8 + line + offset * 8]
+        count += 1
+
+    of = open(outfile,'wb')
+    try:
+        of.write(''.join(outchars[:length*8]))
+        print('C64 charset written to ' + outfile + '.')
+    except:
+        print('File I/O error.')
+
 f = open(rawfile, 'r')
 bitmap = f.read()
 width = 4
@@ -151,4 +185,5 @@ scroller.config(command=bitmapView.yview)
 makebitmap(bitmap)
 bitmapView.config(yscrollcommand=scroller.set)
 bitmapView.pack(side=LEFT)
-root.mainloop()
+if not outfile: root.mainloop()
+
