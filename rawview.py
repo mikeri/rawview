@@ -65,7 +65,7 @@ def makebitmap(bitmap):
             y1 = bytepos * height
             x2 = bitpos * width + width
             y2 = bytepos * height + height
-            if bit > 0: bitmapView.create_rectangle(x1, y1, x2, y2, fill='black')
+            if bit: bitmapView.create_rectangle(x1, y1, x2, y2, fill='black')
 
 def amigaload(font):
     fontsetting = readheader(font)
@@ -74,7 +74,7 @@ def amigaload(font):
         location = []
         charwidth = []
         # Strip header
-        font = font[36:]
+        font = font[32:]
         lochar = fontsetting['tf_LoChar']
         hichar = fontsetting['tf_HiChar']
         length = fontsetting['tf_Modulo']
@@ -87,32 +87,32 @@ def amigaload(font):
             location.append(data[0])
             charwidth.append(data[1])
             count += 1
-            dprint(count)
-            dprint(location[count-1])
-            dprint(charwidth[count-1])
+            dprint('Char number: ' + str(count) + 
+                    ' - Location: ' + str(location[count-1]) + 
+                    ' - Width :' + str(charwidth[count-1]))
 
         fontbits = []
         count = 0
-        for char in font:
+        for char in range(fontpos,fontpos + length * 8):
             count += 1
-            dprint(count)
-            dprint(ord(char))
-            bits = decodebyte(char)
+            dprint('Byte: ' + str(count) + ' - Value: ' + str(ord(font[char])))
+            bits = decodebyte(font[char])
             fontbits += bits
 
         dprint(fontbits)
 
         for char in range(0, numchars):
             for row in range (0, 8):
-                dprint(('char:' ,char))
                 #fetchbyte = location[char]/8 + (length * row)
                 #if char == 0: fetchbyte = 0
                 #dprint(fetchbyte)
-                bitlocation = location[char] + (length * row)
+                bitlocation = location[char] + (length * 8 * row)
                 charbits = fontbits[bitlocation:bitlocation+8]
                 #bitmapbyte = font[fetchbyte]
                 bitmapbyte = encodebyte(charbits)
-                dprint(len(charbits))
+                dprint('char: ' + str(char) + 
+                       ' - Length: ' + str(len(charbits)) + 
+                       ' - Byte value: ' + str(ord(bitmapbyte)))
                 #bitmap.append(bitmapbyte)
                 bitmap += bitmapbyte
         if outfile: writepetscii(bitmap, lochar, hichar)
@@ -177,7 +177,7 @@ def writepetscii(bitmap,lochar,hichar):
     asciiorder =   ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[£]^_\\abcdefghijklmnopqrstuvwxyz'.decode('utf-8')
     length = len(petsciiorder)
     outchars = []
-    offset = 73 
+    offset = 32 - lochar 
 
     for count in range(0, 255 * 8):
         outchars.append(0)
