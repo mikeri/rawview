@@ -11,9 +11,25 @@ parser = argparse.ArgumentParser(description=("Display raw bitmaps"))
 parser.add_argument('rawfile', metavar='file', 
                     help=("Font or bitmap to load."))
 
+parser.add_argument('-s', '--space', 
+                    action='store_true',
+                    help="Add space between chars when displaying them.",)
+
+parser.add_argument('-c', '--console', 
+                    action='store_true',
+                    help="Output to console.",)
+
 parser.add_argument('-a', '--amiga', 
                     action='store_true',
                     help="Attempt to load as Amiga font.",)
+
+parser.add_argument('-l', metavar='zerochar', 
+                    default = '.',
+                    help="Character to show as low bit when using --console.",)
+
+parser.add_argument('-H', metavar='onechar', 
+                    default = '*',
+                    help="Character to show as high bit when using --console.",)
 
 parser.add_argument('-o', metavar='outfile', 
                     help="Attempt to convert to and write C64 charset.",)
@@ -21,12 +37,17 @@ parser.add_argument('-o', metavar='outfile',
 parser.add_argument('--debug', 
                     action='store_true',
                     help="Print debug info.",)
-
+onechar = '*'
+zerochar = '.'
 args = parser.parse_args()
 rawfile = args.rawfile
 debug = args.debug
 amiga = args.amiga
 outfile = args.o
+console = args.console
+space = args.space
+zerochar = args.l
+onechar = args.H
 
 def dprint(message):
     if debug: print(message)
@@ -50,6 +71,22 @@ def encodebyte(bits):
         if bit: byte += bitval
         bitval = bitval / 2
     return chr(byte)
+
+def consoleoutput(bitmap):
+    global space
+    global onechar
+    global zerochar
+    bytepos = 0
+    for byte in bitmap:
+        if space and bytepos % 8 == 0: print('')
+        bytepos += 1
+        bits = decodebyte(byte)
+        bitpos = 0
+        print('')
+        for bit in bits:
+            bitpos += 1
+            if bit: sys.stdout.write(onechar)
+            else: sys.stdout.write(zerochar)
 
 def makebitmap(bitmap):
     global height
@@ -214,5 +251,5 @@ scroller.config(command=bitmapView.yview)
 makebitmap(bitmap)
 bitmapView.config(yscrollcommand=scroller.set)
 bitmapView.pack(side=LEFT)
-if not outfile: root.mainloop()
-
+if console: consoleoutput(bitmap) 
+if not outfile and not console: root.mainloop()
